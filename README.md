@@ -1,7 +1,5 @@
 This task requires 4 elements and a main displaying function
 
-Ask Chris about using cryptography and flask functionality??
-
 Securing Accounts:
 
 Requires password conditions
