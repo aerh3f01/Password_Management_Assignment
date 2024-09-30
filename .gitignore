@@ -9,6 +9,7 @@ __pycache__/
 #Document Files
 *.docx
 *.doc
+*.txt
 
 # Distribution / packaging
 .Python
