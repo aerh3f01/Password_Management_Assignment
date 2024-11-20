@@ -2,7 +2,7 @@ import os
 import hashlib
 import random
 import string
-import fcntl
+import portalocker
 
 DEFAULT_FILENAME = 'passwords.txt'
 SALT_LENGTH = 8
@@ -90,11 +90,11 @@ class PasswordManager:
         try:
             with open(self.filename, 'a') as file:
                 # Lock the file to prevent race conditions
-                fcntl.flock(file, fcntl.LOCK_EX)
+                portalocker.lock(file, portalocker.LOCK_EX)
                 try:
                     file.write(f"{username}:{salt}:{hashed_password}\n")
                 finally:
-                    fcntl.flock(file, fcntl.LOCK_UN)
+                    portalocker.unlock(file)
             return 'Password stored successfully'
         except IOError as e:
             raise IOError(f"An error occurred while writing to the file {self.filename}: {e}")
