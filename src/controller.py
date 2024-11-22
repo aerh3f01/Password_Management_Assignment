@@ -1,5 +1,5 @@
 import sys
-from managers import PasswordManager, PasswordValidator
+from managers import PasswordManager, PasswordValidator, PasswordGeneration
 from getpass import getpass
 
 class MainController:
@@ -47,17 +47,26 @@ class MainController:
                     print("An unexpected error occurred. Please try again.")
                     continue  # Allow the user to retry
 
+    
+
     def run(self):
         """Runs the main program loop."""
         print('Welcome to the password manager!')
+        print('Please enter your username and password.')
         
         try:
             username = input('Username: ').strip()
             if not username:
                 raise ValueError("Username cannot be empty.")
             
-            password = self.get_valid_password()
-
+            # Auto generate password or manual input
+            print('Would you like to auto-generate a password?')
+            if input('Yes or No: ').strip().lower() in ['yes', 'y']:
+                password = PasswordGeneration().generate_password()
+                print(f'Generated password: " {password} "')
+                print('Please keep this master password safe.')
+            else:
+                password = self.get_valid_password()
             # Store the password securely
             result = self.manager.store_password(username, password)
             print(result)
