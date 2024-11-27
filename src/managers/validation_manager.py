@@ -42,7 +42,6 @@ class PasswordValidator:
         str: The feedback from the zxcvbn algorithm.
         """
         result = zxcvbn(password)
-        print(result)
 
         return result['score'], result['feedback']['suggestions']
     
