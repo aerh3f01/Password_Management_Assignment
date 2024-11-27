@@ -1,41 +1,35 @@
 import string
-import secrets
-
+from secrets import SystemRandom, choice
 class PasswordGeneration:
     """
-    Handle Automatic Password Generation
+    Handles automatic password generation with specific requirements.
     """
-
     def __init__(self):
-        # Define minimum requirements
-        self.length = 18
-        self.upperCase = 2
+        # Minimum requirements for the password
+        self.length = 15
+        self.uppercase = 2
         self.numbers = 2
         self.specials = 2
 
-    def generate_password(self):
+    def generate_secure_password(self):
         """
-        Generate a password with the defined requirements.
+        Generate a secure password meeting the defined criteria.
         """
-        # Define the character sets
+        # Character sets
         upperCase = string.ascii_uppercase
         lowerCase = string.ascii_lowercase
         numbers = string.digits
         specials = string.punctuation
 
-        # Initialize the password
-        password = []
+        # Build the password with required characters
+        password = [
+            *(choice(upperCase) for _ in range(self.uppercase)),
+            *(choice(numbers) for _ in range(self.numbers)),
+            *(choice(specials) for _ in range(self.specials)),
+            *(choice(upperCase + lowerCase + numbers + specials) 
+              for _ in range(self.length - self.uppercase - self.numbers - self.specials))
+        ]
 
-        # Add the required characters
-        password.extend(secrets.choice(upperCase) for _ in range(self.upperCase))
-        password.extend(secrets.choice(numbers) for _ in range(self.numbers))
-        password.extend(secrets.choice(specials) for _ in range(self.specials))
-
-        # Add the remaining characters
-        remaining = self.length - self.upperCase - self.numbers - self.specials
-        password.extend(secrets.choice(upperCase + lowerCase + numbers + specials) for _ in range(remaining))
-
-        # Shuffle the password
-        secrets.SystemRandom().shuffle(password)
-
+        # Shuffle and return as a string
+        SystemRandom().shuffle(password)
         return ''.join(password)

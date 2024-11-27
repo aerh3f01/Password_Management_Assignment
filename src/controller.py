@@ -62,7 +62,7 @@ class MainController:
             # Auto generate password or manual input
             print('Would you like to auto-generate a password?')
             if input('Yes or No: ').strip().lower() in ['yes', 'y']:
-                password = PasswordGeneration().generate_password()
+                password = PasswordGeneration().generate_secure_password()
                 print(f'Generated password: " {password} "')
                 print('Please keep this master password safe.')
             else:

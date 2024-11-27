@@ -7,14 +7,10 @@ class PasswordManagerGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Password Manager")
-        self.root.geometry("700x500")
+        self.root.geometry("400x390")
         
         # Default Styles
         self.style = ttk.Style()
-        self.style.configure('TLabel', font=('Arial', 12))
-        self.style.configure('TEntry', font=('Arial', 12))
-        self.style.configure('TButton', font=('Arial', 12))
-        
         self.high_contrast_mode = False
         self.large_font_mode = False
         
@@ -34,6 +30,9 @@ class PasswordManagerGUI:
         # Widgets
         self.create_widgets()
 
+        # Apply default styles
+        self.apply_default_styles()
+
     def create_menu(self):
         """Recreate the menu bar to reflect style changes."""
         # Accessibility Menu
@@ -52,42 +51,53 @@ class PasswordManagerGUI:
         """Create and layout the main widgets."""
         # Username
         self.username_label = ttk.Label(self.main_frame, text="Username:")
-        self.username_label.grid(row=0, column=0, sticky=tk.W, pady=10)
+        self.username_label.grid(row=0, column=0, sticky=tk.W, pady=5)
         self.username_entry = ttk.Entry(self.main_frame)
-        self.username_entry.grid(row=0, column=1, sticky=tk.W, pady=10)
+        self.username_entry.grid(row=0, column=1, sticky=tk.W, pady=5)
 
         # Password
         self.password_label = ttk.Label(self.main_frame, text="Password:")
-        self.password_label.grid(row=1, column=0, sticky=tk.W, pady=10)
+        self.password_label.grid(row=1, column=0, sticky=tk.W, pady=5)
         self.password_entry = ttk.Entry(self.main_frame, show="*")
-        self.password_entry.grid(row=1, column=1, sticky=tk.W, pady=10)
+        self.password_entry.grid(row=1, column=1, sticky=tk.W, pady=5)
 
         # Generate Password Button
         self.generate_button = ttk.Button(self.main_frame, text="Generate Password", command=self.generate_password)
-        self.generate_button.grid(row=2, column=1, sticky=tk.W, pady=10)
+        self.generate_button.grid(row=2, column=0, sticky=tk.W, pady=5)
 
         # Generate Passphrase Button
         self.generate_passphrase_button = ttk.Button(self.main_frame, text="Generate Passphrase", command=self.generate_passphrase)
-        self.generate_passphrase_button.grid(row=3, column=1, sticky=tk.W, pady=10)
+        self.generate_passphrase_button.grid(row=3, column=0, sticky=tk.W, pady=5)
 
         # Copy Password Button
         self.copy_button = ttk.Button(self.main_frame, text="Copy Password", command=self.copy_password)
-        self.copy_button.grid(row=2, column=2, sticky=tk.W, padx=10, pady=10)
+        self.copy_button.grid(row=2, column=1, sticky=tk.W, pady=5)
         self.copy_button.state(["disabled"])  # Initially disabled
 
         # Store Password Button
         self.store_button = ttk.Button(self.main_frame, text="Store Password", command=self.store_password)
-        self.store_button.grid(row=4, column=1, sticky=tk.W, pady=10)
+        self.store_button.grid(row=4, column=0, sticky=tk.W, pady=5)
 
-        # Status
-        self.status_label = ttk.Label(self.main_frame, text="", foreground="blue")
+        # Status Label
+        self.status_label = ttk.Label(self.main_frame, text="", wraplength=300)
         self.status_label.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=10)
 
         # Scrollable Suggestions Box
         self.scrollable_frame = ttk.Frame(self.main_frame)
         self.scrollable_frame.grid(row=6, column=0, columnspan=3, sticky=tk.W, pady=10)
 
-        self.suggestions_text = tk.Text(self.scrollable_frame, wrap=tk.WORD, height=5, font=('Arial', 12), state='disabled')
+        # Suggestion Label
+        self.suggestions_label = ttk.Label(self.scrollable_frame, text="Password Suggestions:", font=('Arial', 10))
+        self.suggestions_label.pack(side=tk.TOP, fill=tk.X)
+
+        # Suggestions Text
+        self.suggestions_text = tk.Text(
+            self.scrollable_frame,
+            wrap=tk.WORD,
+            height=5,  # Control height
+            width=38,  # Control width (smaller width here)
+            font=('Arial', 12)
+        )
         self.suggestions_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.scrollbar = ttk.Scrollbar(self.scrollable_frame, orient=tk.VERTICAL, command=self.suggestions_text.yview)
@@ -95,38 +105,58 @@ class PasswordManagerGUI:
 
         self.suggestions_text.configure(yscrollcommand=self.scrollbar.set)
 
+        # Set default suggestion text
+        self.suggestions_text.insert(tk.END, "At least 8 characters\nAt least one uppercase letter\nAt least one number\nAt least one special character")
+        self.suggestions_text.configure(state='disabled')
+
+        # Set focus to the username entry
+        self.username_entry.focus()
+
+    def apply_default_styles(self):
+        """Apply default styles for the app."""
+        self.style.theme_use("default")
+        self.style.configure("TLabel", background="SystemButtonFace", foreground="black")
+        self.style.configure("TEntry", fieldbackground="white", foreground="black")
+        self.style.configure("TButton", background="grey", foreground="black", padding=5)
+        self.style.configure("TFrame", background="white")
+        self.style.map("TButton", background=[("active", "light grey")])
+
+        # Update the main frame background
+        self.main_frame.config(style="TFrame")
+
+        # Update Text widget styles
+        self.suggestions_text.configure(background="white", foreground="black", insertbackground="black")  # Cursor color
+
+        # Update the root background
+        self.root.config(bg="SystemButtonFace")
+
+    def apply_high_contrast_styles(self):
+        """Apply high contrast styles for the app."""
+        # Update ttk widget styles
+        self.style.configure("TLabel", background="black", foreground="white")
+        self.style.configure("TEntry", fieldbackground="black", foreground="white")
+        self.style.configure("TButton", background="black", foreground="white", padding=5)
+        self.style.configure("TFrame", background="black")
+        self.style.map("TButton", background=[("active", "grey")])
+
+        # Update the root background color
+        self.root.config(bg="black")
+
+        # Update the main frame background
+        self.main_frame.config(style="TFrame")
+
+        # Update Text widget styles
+        self.suggestions_text.configure(background="black", foreground="white", insertbackground="white")  # Cursor color
+
 
 
     def toggle_high_contrast(self):
         """Enable or disable high contrast mode."""
         self.high_contrast_mode = not self.high_contrast_mode
         if self.high_contrast_mode:
-            # Apply high contrast styling
-            self.style.configure('TLabel', background='black', foreground='white')
-            self.style.configure('TEntry', fieldbackground='black', foreground='white')
-            self.style.configure('TButton', background='black', foreground='white')
-
-            # Update window and menu bar background
-            self.root.config(bg='black')
-            self.update_menu_styles(bg='black', fg='white', activebg='gray', activefg='white')
+            self.apply_high_contrast_styles()
         else:
-            # Revert to default styling
-            self.style.configure('TLabel', background='light grey', foreground='black')
-            self.style.configure('TEntry', fieldbackground='grey', foreground='black')
-            self.style.configure('TButton', background='grey', foreground='black')
-
-            # Update window and menu bar background to defaults
-            self.root.config(bg='SystemButtonFace')
-            self.update_menu_styles(bg='SystemButtonFace', fg='black', activebg='SystemHighlight', activefg='black')
-
-    def update_menu_styles(self, bg, fg, activebg, activefg):
-        """Helper function to update menu bar styles."""
-        # Recreate the menu bar with updated styles
-        self.menu_bar = tk.Menu(self.root, bg=bg, fg=fg, activebackground=activebg, activeforeground=activefg)
-        self.root.config(menu=self.menu_bar)
-        self.create_menu()
-
-
+            self.apply_default_styles()
 
     def toggle_large_font(self):
         """Enable or disable large font mode."""
@@ -138,27 +168,27 @@ class PasswordManagerGUI:
 
     def generate_password(self):
         """Generate a strong password and display it."""
-        password = self.password_generator.generate_password()
+        password = self.password_generator.generate_secure_password()
         self.password_entry.delete(0, tk.END)
         self.password_entry.insert(0, password)
-        self.status_label.config(text=f"Generated: {password} Keep it safe.", foreground="blue")
-        self.copy_button.state(["!disabled"]) 
+        self.status_label.config(text=f"Generated: {password} \nKeep it safe.", foreground="green")
+        self.copy_button.state(["!disabled"])
 
     def generate_passphrase(self):
         """Generate a passphrase and display it."""
         passphrase = PassphraseGenerator().generate_passphrase()
         self.password_entry.delete(0, tk.END)
         self.password_entry.insert(0, passphrase)
-        self.status_label.config(text=f"Generated: {passphrase} Keep it safe.", foreground="blue")
+        self.status_label.config(text=f"Generated: {passphrase} \nKeep it safe.", foreground="orange")
         self.copy_button.state(["!disabled"])
 
     def copy_password(self):
         """Copy the generated password to the clipboard."""
         password = self.password_entry.get().strip()
         if password:
-            self.root.clipboard_clear()  # Clear the clipboard
-            self.root.clipboard_append(password)  # Append the password
-            self.root.update()  # Make sure the clipboard content is updated
+            self.root.clipboard_clear()
+            self.root.clipboard_append(password)
+            self.root.update()
             self.status_label.config(text="Password copied to clipboard!", foreground="green")
         else:
             self.status_label.config(text="No password to copy!", foreground="red")
@@ -181,15 +211,14 @@ class PasswordManagerGUI:
         else:
             validation_result, suggestions = result, "No password suggestions."
 
-        # Clear and update the suggestions box
-        self.suggestions_text.configure(state='normal')  # Make text editable for updating
-        self.suggestions_text.delete('1.0', tk.END)  # Clear previous suggestions
+        self.suggestions_text.configure(state='normal')
+        self.suggestions_text.delete('1.0', tk.END)
         if isinstance(suggestions, (list, tuple)):
             for suggestion in suggestions:
                 self.suggestions_text.insert(tk.END, f"- {suggestion}\n")
         else:
             self.suggestions_text.insert(tk.END, suggestions)
-        self.suggestions_text.configure(state='disabled')  # Make text read-only again
+        self.suggestions_text.configure(state='disabled')
 
         if validation_result == "strong":
             result = self.manager.store_password(username, password)
@@ -203,7 +232,6 @@ class PasswordManagerGUI:
                 self.status_label.config(text="Weak password rejected.", foreground="red")
         else:
             self.status_label.config(text="Invalid password.", foreground="red")
-
 
     def show_about(self):
         """Display information about the application."""

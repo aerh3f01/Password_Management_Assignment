@@ -23,6 +23,7 @@ class PasswordValidator:
 
         self.strong_requirements = {
             'length': 13,
+            'upper': 2,
             'lower': 2,
             'number': 2,
             'special': 2
@@ -91,7 +92,7 @@ class PasswordValidator:
         else:
             security_score, suggestions = self._security_score(password)
             if security_score == 4:
-                return 'strong'
+                return 'strong', "Great password! No security suggestions."
             elif security_score >= 3:
                 return 'weak', suggestions
             else:
