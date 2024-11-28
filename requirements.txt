@@ -1,0 +1,7 @@
+argon2==0.1.10
+keyring==25.5.0
+portalocker==3.0.0
+pyotp==2.9.0
+qrcode==8.0
+xkcdpass==1.19.9
+zxcvbn==4.4.28

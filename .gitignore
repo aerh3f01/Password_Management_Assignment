@@ -9,8 +9,7 @@ __pycache__/
 #Document Files
 *.docx
 *.doc
-*.txt
-
+passwords.*
 # Distribution / packaging
 .Python
 build/
