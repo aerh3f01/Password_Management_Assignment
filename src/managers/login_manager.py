@@ -4,6 +4,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 import keyring
 from managers.validation_manager import PasswordValidator
+import pyotp
 
 APP_NAME = "pass_man"
 
@@ -18,6 +19,7 @@ class LoginManager:
     def __init__(self):
         self.ph = PasswordHasher()
         self.validator = PasswordValidator()
+        self.otp = pyotp.TOTP(pyotp.random_base32())
 
     def _hash_master_password(self, password):
         """
@@ -74,18 +76,16 @@ class LoginManager:
 
     def register(self, username, password):
         """
-        Register a new user by storing their hashed password.
+        Register a new user by storing the hashed password.
         Raise ValueError if the username already exists.
         """
-        try:
-            if keyring.get_password(APP_NAME, username):
-                Exception("Username already exists.")
-            # Validate the password
-            self._validate_password(password)
-            hashed_password = self._hash_master_password(password)
-            self._store_master_password(username, hashed_password)
-        except Exception as e:
-            raise e
+        self._validate_password(password)
+        hashed_password = self._hash_master_password(password)
+        keyring.set_password(APP_NAME, username, hashed_password)
+        self.generate_userpin(username)
+        self.generate_otp(username)
+        return True
+    
 
     def login(self, username, password):
         """
@@ -93,4 +93,29 @@ class LoginManager:
         Return True if valid, otherwise False.
         """
         hashed_password = self._get_master_password(username)
+
         return self._validate_master_password(password, hashed_password)
+
+    def generate_userpin(self, username):
+        """
+        Generate a unique 4 digit userpin for the user.
+        """
+        pass
+
+    def get_userpin(self):
+        """
+        Retrieve the userpin for the user.
+        """
+        pass
+
+    def verify_otp(self, otp):
+        """
+        Use pyotp to verify the OTP entered by the user.
+        """
+        try:
+            if not otp:
+                PasswordManagerError("Please enter the OTP.")
+            pyotp.TOTP.verify(otp)
+        except Exception as e:
+            raise e
+

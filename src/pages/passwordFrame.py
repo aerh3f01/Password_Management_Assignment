@@ -49,11 +49,13 @@ class PasswordsPage(tk.Frame):
         back_button = ttk.Button(self, text="Back", command=lambda: controller.show_frame("StartPage"))
         back_button.pack()
 
+        self.userpin = self.login_manager.get_userpin()
+
     def update_password_list(self):
         """
         Updates the password list with the current passwords
         """
-        for password in self.password_manager.get_passwords():
+        for password in self.password_manager.get_passwords(userpin=0000):
             self.password_list.insert("", "end", text="", values=(password["website"], password["username"], password["password"]))
 
     def add_password(self):
@@ -74,8 +76,9 @@ class PasswordsPage(tk.Frame):
         if selected:
             item = self.password_list.item(selected)
             website = item["values"][0] # Website is the first value
+            username = item["values"][1]
             try:
-                self.password_manager.delete_password(website)
+                self.password_manager.delete_password(website, username)
                 self.password_list.delete(selected)
             except Exception as e:
                 self.controller.handle_error(e)

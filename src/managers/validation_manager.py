@@ -46,6 +46,8 @@ class PasswordValidator:
             return result['score'], result['feedback']['suggestions']
         except IndexError:
             return 0, "Error: Password is too weak."
+        except KeyError:
+            return 0, "Error: Password is too weak."
         except Exception as e:
             return 0, "Error: " + str(e)
     

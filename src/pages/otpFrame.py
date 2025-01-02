@@ -1,31 +1,26 @@
-# A page for registration of new users
 import tkinter as tk
 from tkinter import ttk
-from managers.login_manager import LoginManager
+from PIL import Image, ImageTk
 import pyotp
 import qrcode
-from PIL import Image, ImageTk
+import os
 
-class RegisterPage(tk.Frame):
-    def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
-        self.controller = controller
-        self.login_manager = LoginManager()
-
+class OTPApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("TOTP QR Code Generator")
+        self.geometry("400x500")
+        
         # Secret key storage
         self.secret_key = None
-
-        label = ttk.Label(self, text="Register", font=controller.title_font)
-        label.pack(side="top", fill="x", pady=10)
-
-        self.username_entry = ttk.Entry(self)
-        self.username_entry.pack()
-        self.password_entry = ttk.Entry(self, show="*")
-        self.password_entry.pack()
-
-        register_button = ttk.Button(self, text="Register", command=self.register)
-        register_button.pack()
-
+        
+        # Username input
+        self.label_username = ttk.Label(self, text="Enter Username:")
+        self.label_username.pack(pady=10)
+        
+        self.entry_username = ttk.Entry(self)
+        self.entry_username.pack(pady=5)
+        
         # Generate QR Code button
         self.button_generate = ttk.Button(self, text="Generate QR Code", command=self.generate_qr_code)
         self.button_generate.pack(pady=10)
@@ -40,22 +35,9 @@ class RegisterPage(tk.Frame):
         # OTP display
         self.otp_label = ttk.Label(self, text="Your OTP will appear here after scanning.", font=("Helvetica", 12))
         self.otp_label.pack(pady=10)
-
-        back_button = ttk.Button(self, text="Back",
-                                command=lambda: controller.show_frame("StartPage"))
-        back_button.pack()
-
-    def register(self):
-        username = self.username_entry.get()
-        password = self.password_entry.get()
-        try:
-            self.login_manager.register(username, password)
-            self.controller.show_frame("PasswordsPage")
-        except Exception as e:
-            self.controller.handle_error(e)
-
+    
     def generate_qr_code(self):
-        username = self.username_entry.get()
+        username = self.entry_username.get().strip()
         
         if not username:
             self.otp_label.config(text="Please enter a username!", foreground="red")
@@ -69,7 +51,7 @@ class RegisterPage(tk.Frame):
         totp = pyotp.TOTP(self.secret_key)
         
         # Create a URL for the QR code (compatible with most authenticator apps)
-        otp_uri = totp.provisioning_uri(name=username, issuer_name="PassMan")
+        otp_uri = totp.provisioning_uri(name=username, issuer_name="PassManApp")
         
         # Generate QR Code
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
@@ -98,3 +80,7 @@ class RegisterPage(tk.Frame):
             self.otp_label.config(text=f"Current OTP: {otp}", foreground="green")
         else:
             self.otp_label.config(text="No secret key found. Generate QR code first.", foreground="red")
+
+if __name__ == "__main__":
+    app = OTPApp()
+    app.mainloop()

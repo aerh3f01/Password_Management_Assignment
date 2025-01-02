@@ -12,10 +12,22 @@ class LoginPage(tk.Frame):
         label = ttk.Label(self, text="Login", font=controller.title_font)
         label.pack(side="top", fill="x", pady=10)
 
+        self.username_entry_label = ttk.Label(self, text="Enter username:")
+        self.username_entry_label.pack()
         self.username_entry = ttk.Entry(self)
         self.username_entry.pack()
+        
+        self.password_entry_label = ttk.Label(self, text="Enter password:")
+        self.password_entry_label.pack()
         self.password_entry = ttk.Entry(self, show="*")
         self.password_entry.pack()
+        
+
+        # OTP input
+        self.otp_entry = ttk.Entry(self)
+        self.otp_entry_label = ttk.Label(self, text="Enter OTP:")
+        self.otp_entry_label.pack()
+        self.otp_entry.pack()
 
         login_button = ttk.Button(self, text="Login", command=self.login)
         login_button.pack()
@@ -27,8 +39,12 @@ class LoginPage(tk.Frame):
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
+        otp = self.otp_entry.get()
         try:
             self.login_manager.login(username, password)
+            self.login_manager.verify_otp(otp)
             self.controller.show_frame("PasswordsPage")  # Navigate on success
         except PasswordManagerError as e:
             self.controller.handle_error(e)  # Display a known error
+        except Exception as e:
+            self.controller.handle_error(e)
