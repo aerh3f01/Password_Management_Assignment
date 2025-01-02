@@ -67,11 +67,12 @@ class PasswordManager:
         except IOError as e:
             raise IOError(f"An error occurred while reading the file {self.filename}: {e}")
 
-    def _store_password(self, username, password):
+    def _store_password(self, site, username, password):
         """
         Stores a password securely for a given username.
         
         Parameters:
+        site (str): The website associated with the password.
         username (str): The username associated with the password.
         password (str): The password to be stored.
         
@@ -92,7 +93,7 @@ class PasswordManager:
                 # Lock the file to prevent race conditions
                 portalocker.lock(file, portalocker.LOCK_EX)
                 try:
-                    file.write(f"{username}:{salt}:{hashed_password}\n")
+                    file.write(f"{site}:{username}:{salt}:{hashed_password}\n")
                 finally:
                     portalocker.unlock(file)
             return 'Password stored successfully'
@@ -129,7 +130,7 @@ class PasswordManager:
         try:
             with open(self.filename, 'r') as file:
                 for line in file:
-                    stored_username, salt, hashed_password = line.strip().split(':')
+                    _, stored_username, salt, hashed_password = line.strip().split(':')
                     if stored_username == username:
                         if self._hash(password, salt) == hashed_password:
                             return True
@@ -153,8 +154,8 @@ class PasswordManager:
             with open(self.filename, 'r') as file:
                 passwords = []
                 for line in file:
-                    stored_username, _, hashed_password = line.strip().split(':')
-                    passwords.append((stored_username, hashed_password))
+                    site, stored_username, _, hashed_password = line.strip().split(':')
+                    passwords.append((site, stored_username, hashed_password))
                 
         except IOError as e:
             raise IOError(f"An error occurred while reading the file {self.filename}: {e}")
@@ -178,7 +179,7 @@ class PasswordManager:
                 lines = file.readlines()
             with open(self.filename, 'w') as file:
                 for line in lines:
-                    stored_username, _, _ = line.strip().split(':')
+                    site, stored_username, _, _ = line.strip().split(':')
                     if stored_username != username:
                         file.write(line)
                 return 'Password removed successfully'
@@ -193,7 +194,7 @@ class PasswordManager:
             with open(self.filename, 'r') as file:
                 passwords = []
                 for line in file:
-                    user, salt, password = line.strip().split(':')
+                    site, user, salt, password = line.strip().split(':')
                     clean_password = self._reverse_hash(password, salt)
                     if self._verify_password(user, clean_password):
                         passwords.append((user, clean_password))
@@ -203,7 +204,7 @@ class PasswordManager:
         except ValueError as e:
             raise ValueError(f"An error occurred while verifying the password: {e}")
         
-    def add_password(self, username, password):
+    def add_password(self, website, username, password):
         """
         Adds a new password for the given username.
         
@@ -217,4 +218,4 @@ class PasswordManager:
         Raises:
         IOError: If the file cannot be written to.
         """
-        return self._store_password(username, password)
+        return self._store_password(website, username, password)

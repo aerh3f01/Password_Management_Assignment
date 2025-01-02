@@ -1,7 +1,7 @@
 # The frame to manage passwords
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, simpledialog, messagebox
 from managers.password_manager import PasswordManager
 from managers.login_manager import LoginManager
 
@@ -60,9 +60,9 @@ class PasswordsPage(tk.Frame):
         """
         Adds a new password to the list
         """
-        website = tk.simpledialog.askstring("Website", "Enter the website")
-        username = tk.simpledialog.askstring("Username", "Enter the username")
-        password = tk.simpledialog.askstring("Password", "Enter the password")
+        website = simpledialog.askstring("Website", "Enter the website")
+        username = simpledialog.askstring("Username", "Enter the username")
+        password = simpledialog.askstring("Password", "Enter the password")
         self.password_manager.add_password(website, username, password)
         self.update_password_list()
 
@@ -74,10 +74,13 @@ class PasswordsPage(tk.Frame):
         if selected:
             item = self.password_list.item(selected)
             website = item["values"][0] # Website is the first value
-            self.password_manager.delete_password(website)
-            self.password_list.delete(selected)
+            try:
+                self.password_manager.delete_password(website)
+                self.password_list.delete(selected)
+            except Exception as e:
+                self.controller.handle_error(e)
         else:
             tk.messagebox.showinfo("Error", "Please select a password to delete")
 
 
-            
+

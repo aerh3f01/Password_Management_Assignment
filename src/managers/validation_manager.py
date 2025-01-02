@@ -41,9 +41,13 @@ class PasswordValidator:
         int: The security score of the password.
         str: The feedback from the zxcvbn algorithm.
         """
-        result = zxcvbn(password)
-
-        return result['score'], result['feedback']['suggestions']
+        try:
+            result = zxcvbn(password)
+            return result['score'], result['feedback']['suggestions']
+        except IndexError:
+            return 0, "Error: Password is too weak."
+        except Exception as e:
+            return 0, "Error: " + str(e)
     
 
     def _min_validation(self, password):

@@ -1,10 +1,7 @@
 # A simple login frame for the application
 import tkinter as tk
 from tkinter import ttk
-from managers.login_manager import LoginManager
-import keyring
-import os
-
+from managers.login_manager import LoginManager, PasswordManagerError
 
 class LoginPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -32,9 +29,6 @@ class LoginPage(tk.Frame):
         password = self.password_entry.get()
         try:
             self.login_manager.login(username, password)
-            self.controller.show_frame("PasswordsPage")
-        except ValueError as e:
-            error_label = ttk.Label(self, text=str(e))
-            error_label.pack()
-
-            
+            self.controller.show_frame("PasswordsPage")  # Navigate on success
+        except PasswordManagerError as e:
+            self.controller.handle_error(e)  # Display a known error

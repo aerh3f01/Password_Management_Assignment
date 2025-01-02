@@ -7,6 +7,10 @@ from managers.validation_manager import PasswordValidator
 
 APP_NAME = "pass_man"
 
+class PasswordManagerError(Exception):
+    ## Blanket exception for PasswordManager
+    ''' Helps mitigate module errors that dont accept specific exceptions '''
+    pass
 class LoginManager:
     """
     Handles user registration and login with secure password hashing and storage.
@@ -32,30 +36,40 @@ class LoginManager:
         Retrieve the hashed password for the username.
         Raise ValueError if the username doesn't exist.
         """
-        password = keyring.get_password(APP_NAME, username)
-        if password is None:
-            raise ValueError("No password associated with the given username.")
-        return password
+        try:
+            password = keyring.get_password(APP_NAME, username)
+            if password is None:
+                PasswordManagerError(f"No password associated with username '{username}'.")
+            return password
+        except keyring.errors.KeyringError as e:
+            # Handle specific Keyring errors
+            raise PasswordManagerError(f"Keyring error while retrieving password: {e}") from e
+
 
     def _validate_master_password(self, password, hashed_password):
         """
         Validate the provided password against the stored hash.
         """
         try:
-            self.ph.verify(hashed_password, password)
-            return True
-        except VerifyMismatchError:
-            return False
+            if not hashed_password or not password:
+                return False
+            
+            if self.ph.verify(hashed_password, password):
+                return True
+        except Exception as e:
+            raise e
         
     def _validate_password(self, password):
         """
         Validate the password against predefined security standards.
         Raise ValueError if the password is weak.
         """
-        score, suggestions = self.validator._security_score(password)
-        if score < 2:
-            raise ValueError("Password is too weak. Suggestions: " + ", ".join(suggestions))
-        
+        try:
+            score, suggestions = self.validator._security_score(password)
+            if score < 2:
+                Exception("Password is too weak. Suggestions: " + ", ".join(suggestions))
+        except Exception as e:
+            raise e
         
 
     def register(self, username, password):
@@ -63,12 +77,15 @@ class LoginManager:
         Register a new user by storing their hashed password.
         Raise ValueError if the username already exists.
         """
-        if keyring.get_password(APP_NAME, username):
-            raise ValueError("Username already exists.")
-        # Validate the password
-        self._validate_password(password)
-        hashed_password = self._hash_master_password(password)
-        self._store_master_password(username, hashed_password)
+        try:
+            if keyring.get_password(APP_NAME, username):
+                Exception("Username already exists.")
+            # Validate the password
+            self._validate_password(password)
+            hashed_password = self._hash_master_password(password)
+            self._store_master_password(username, hashed_password)
+        except Exception as e:
+            raise e
 
     def login(self, username, password):
         """

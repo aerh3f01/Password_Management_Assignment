@@ -30,6 +30,5 @@ class RegisterPage(tk.Frame):
         try:
             self.login_manager.register(username, password)
             self.controller.show_frame("PasswordsPage")
-        except ValueError as e:
-            error_label = ttk.Label(self, text=str(e))
-            error_label.pack()
+        except Exception as e:
+            self.controller.handle_error(e)
