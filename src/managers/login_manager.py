@@ -3,6 +3,7 @@
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 import keyring
+from managers.validation_manager import PasswordValidator
 
 APP_NAME = "pass_man"
 
@@ -12,6 +13,7 @@ class LoginManager:
     """
     def __init__(self):
         self.ph = PasswordHasher()
+        self.validator = PasswordValidator()
 
     def _hash_master_password(self, password):
         """
@@ -44,6 +46,17 @@ class LoginManager:
             return True
         except VerifyMismatchError:
             return False
+        
+    def _validate_password(self, password):
+        """
+        Validate the password against predefined security standards.
+        Raise ValueError if the password is weak.
+        """
+        score, suggestions = self.validator._security_score(password)
+        if score < 2:
+            raise ValueError("Password is too weak. Suggestions: " + ", ".join(suggestions))
+        
+        
 
     def register(self, username, password):
         """
@@ -52,6 +65,8 @@ class LoginManager:
         """
         if keyring.get_password(APP_NAME, username):
             raise ValueError("Username already exists.")
+        # Validate the password
+        self._validate_password(password)
         hashed_password = self._hash_master_password(password)
         self._store_master_password(username, hashed_password)
 

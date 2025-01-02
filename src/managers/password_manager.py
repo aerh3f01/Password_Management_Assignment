@@ -67,7 +67,7 @@ class PasswordManager:
         except IOError as e:
             raise IOError(f"An error occurred while reading the file {self.filename}: {e}")
 
-    def store_password(self, username, password):
+    def _store_password(self, username, password):
         """
         Stores a password securely for a given username.
         
@@ -98,4 +98,123 @@ class PasswordManager:
             return 'Password stored successfully'
         except IOError as e:
             raise IOError(f"An error occurred while writing to the file {self.filename}: {e}")
-    
+
+    def _reverse_hash(self, hashed_password, salt):
+        """
+        Reverses the hash operation to retrieve the original password.
+        
+        Parameters:
+        hashed_password (str): The hashed password to reverse.
+        salt (str): The salt used in the hashing operation.
+        
+        Returns:
+        str: The original password.
+        """
+        return hashed_password[:len(hashed_password) - len(salt)]
+
+    def _verify_password(self, username, password):
+        """
+        Verifies the provided password for the given username.
+        
+        Parameters:
+        username (str): The username to verify.
+        password (str): The password to verify.
+        
+        Returns:
+        bool: True if the password is correct, False otherwise.
+        
+        Raises:
+        ValueError: If the username does not exist or the password is incorrect.
+        """
+        try:
+            with open(self.filename, 'r') as file:
+                for line in file:
+                    stored_username, salt, hashed_password = line.strip().split(':')
+                    if stored_username == username:
+                        if self._hash(password, salt) == hashed_password:
+                            return True
+                        else:
+                            return False
+                raise ValueError('Username not found')
+        except IOError as e:
+            raise IOError(f"An error occurred while reading the file {self.filename}: {e}")
+            
+    def load_passwords(self):
+        """
+        Loads and returns all stored passwords.
+        
+        Returns:
+        list: A list of tuples containing the username and hashed password.
+
+        Raises:
+        IOError: If the file cannot be read.
+        """
+        try:
+            with open(self.filename, 'r') as file:
+                passwords = []
+                for line in file:
+                    stored_username, _, hashed_password = line.strip().split(':')
+                    passwords.append((stored_username, hashed_password))
+                
+        except IOError as e:
+            raise IOError(f"An error occurred while reading the file {self.filename}: {e}")
+        
+    def remove_password(self, username):
+        """
+        Removes the stored password for the given username.
+        
+        Parameters:
+        username (str): The username associated with the password.
+        
+        Returns:
+        str: A message indicating the password was removed successfully.
+        
+        Raises:
+        ValueError: If the username does not exist.
+        IOError: If the file cannot be written to.
+        """
+        try:
+            with open(self.filename, 'r') as file:
+                lines = file.readlines()
+            with open(self.filename, 'w') as file:
+                for line in lines:
+                    stored_username, _, _ = line.strip().split(':')
+                    if stored_username != username:
+                        file.write(line)
+                return 'Password removed successfully'
+        except IOError as e:
+            raise IOError(f"An error occurred while writing to the file {self.filename}: {e}")
+        except ValueError:
+            raise ValueError('Username not found')
+        
+    def get_passwords(self):
+        
+        try:
+            with open(self.filename, 'r') as file:
+                passwords = []
+                for line in file:
+                    user, salt, password = line.strip().split(':')
+                    clean_password = self._reverse_hash(password, salt)
+                    if self._verify_password(user, clean_password):
+                        passwords.append((user, clean_password))
+                return passwords
+        except IOError as e:
+            raise IOError(f"An error occurred while reading the file {self.filename}: {e}")
+        except ValueError as e:
+            raise ValueError(f"An error occurred while verifying the password: {e}")
+        
+    def add_password(self, username, password):
+        """
+        Adds a new password for the given username.
+        
+        Parameters:
+        username (str): The username associated with the password.
+        password (str): The password to be stored.
+        
+        Returns:
+        str: A message indicating the password was added successfully.
+        
+        Raises:
+        IOError: If the file cannot be written to.
+        """
+        return self._store_password(username, password)
