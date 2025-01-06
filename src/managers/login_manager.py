@@ -12,6 +12,9 @@ class PasswordManagerError(Exception):
     ## Blanket exception for PasswordManager
     ''' Helps mitigate module errors that dont accept specific exceptions '''
     pass
+
+APP_NAME = "pass_man"
+
 class LoginManager:
     """
     Handles user registration and login with secure password hashing and storage.
@@ -41,12 +44,11 @@ class LoginManager:
         try:
             password = keyring.get_password(APP_NAME, username)
             if password is None:
-                PasswordManagerError(f"No password associated with username '{username}'.")
+                raise PasswordManagerError(f"No password associated with username '{username}'.")
             return password
         except keyring.errors.KeyringError as e:
             # Handle specific Keyring errors
             raise PasswordManagerError(f"Keyring error while retrieving password: {e}") from e
-
 
     def _validate_master_password(self, password, hashed_password):
         """
@@ -55,12 +57,12 @@ class LoginManager:
         try:
             if not hashed_password or not password:
                 return False
-            
+
             if self.ph.verify(hashed_password, password):
                 return True
         except Exception as e:
             raise e
-        
+
     def _validate_password(self, password):
         """
         Validate the password against predefined security standards.
@@ -69,10 +71,9 @@ class LoginManager:
         try:
             score, suggestions = self.validator._security_score(password)
             if score < 2:
-                Exception("Password is too weak. Suggestions: " + ", ".join(suggestions))
+                raise Exception("Password is too weak. Suggestions: " + ", ".join(suggestions))
         except Exception as e:
             raise e
-        
 
     def register(self, username, password):
         """
@@ -82,10 +83,12 @@ class LoginManager:
         self._validate_password(password)
         hashed_password = self._hash_master_password(password)
         keyring.set_password(APP_NAME, username, hashed_password)
-        self.generate_userpin(username)
-        self.generate_otp(username)
+
+        # Generate and store a consistent userpin
+        userpin = self.generate_userpin(username)
+        keyring.set_password(APP_NAME, f"{username}_userpin", userpin)
+
         return True
-    
 
     def login(self, username, password):
         """
@@ -93,20 +96,32 @@ class LoginManager:
         Return True if valid, otherwise False.
         """
         hashed_password = self._get_master_password(username)
-
         return self._validate_master_password(password, hashed_password)
 
     def generate_userpin(self, username):
         """
-        Generate a unique 4 digit userpin for the user.
+        Generate a consistent 4-digit userpin based on the username.
+        If the userpin already exists, retrieve it from Keyring.
         """
-        pass
+        try:
+            existing_userpin = keyring.get_password(APP_NAME, f"{username}_userpin")
+            if existing_userpin:
+                return existing_userpin
+        except keyring.errors.KeyringError:
+            pass
 
-    def get_userpin(self):
+        # Generate and return a new userpin if not found
+        userpin = str(abs(hash(username)) % 10000).zfill(4)
+        return userpin
+
+    def get_userpin(self, username):
         """
-        Retrieve the userpin for the user.
+        Retrieve the stored userpin for the username.
         """
-        pass
+        userpin = keyring.get_password(APP_NAME, f"{username}_userpin")
+        if not userpin:
+            raise PasswordManagerError(f"No userpin found for username '{username}'.")
+        return userpin
 
     def verify_otp(self, otp):
         """
@@ -114,8 +129,8 @@ class LoginManager:
         """
         try:
             if not otp:
-                PasswordManagerError("Please enter the OTP.")
-            pyotp.TOTP.verify(otp)
+                raise PasswordManagerError("Please enter the OTP.")
+            if not self.otp.verify(otp):
+                raise PasswordManagerError("Invalid OTP.")
         except Exception as e:
             raise e
-

@@ -1,108 +1,106 @@
-import os
-import bcrypt
-import portalocker
+import keyring
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+from Crypto.Util.Padding import pad, unpad
 from managers.validation_manager import PasswordValidator
 
-DEFAULT_FILENAME = '{userpin}.PXX'
+APP_NAME = "pass_man"
 
 class PasswordManager:
     """
     Handles secure storage and management of passwords.
-    
+
     This class provides functionalities to:
-    - Ensure the password storage file exists.
     - Encrypt and decrypt passwords.
-    - Store passwords securely in a file.
+    - Store passwords securely in a keyring.
     - Check for existing usernames.
     """
 
-    def __init__(self, filename=DEFAULT_FILENAME):
+    def __init__(self):
         """
-        Initializes the PasswordManager with the given filename.
-        
-        Parameters:
-        filename (str): The name of the file used to store passwords.
+        Initializes the PasswordManager.
         """
-        self._filename = filename
+        self._key = get_random_bytes(16)  # AES-128 key size
 
-    def _ensure_file_exists(self, userpin):
-        """Ensures the password storage file exists. Creates it if not present."""
-        self._filename = DEFAULT_FILENAME.format(userpin=userpin)
-        if not os.path.exists(self._filename):
-            try:
-                with open(self._filename, 'w') as file:
-                    file.write('')  # Create an empty file
-            except IOError as e:
-                raise IOError(f"Unable to create the file {self._filename}: {e}")
-            
     def _encrypt(self, password):
-        """Encrypts the given password using bcrypt."""
-        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-    
-    def _decrypt(self, encrypted_password, password):
-        """Decrypts the given password using bcrypt."""
-        return bcrypt.checkpw(password.encode(), encrypted_password.encode())
-    
+        """Encrypts the given password using AES."""
+        cipher = AES.new(self._key, AES.MODE_CBC)
+        ciphertext = cipher.encrypt(pad(password.encode(), AES.block_size))
+        return cipher.iv + ciphertext
+
+    def _decrypt(self, encrypted_data):
+        """Decrypts the given encrypted password using AES."""
+        iv = encrypted_data[:AES.block_size]
+        ciphertext = encrypted_data[AES.block_size:]
+        cipher = AES.new(self._key, AES.MODE_CBC, iv)
+        return unpad(cipher.decrypt(ciphertext), AES.block_size).decode()
+
     def _username_exists(self, username):
-        """Checks if the username already exists in the file."""
+        """Checks if the username already exists in the keyring."""
         try:
-            with open(self._filename, 'r') as file:
-                for line in file:
-                    if line.startswith(username + ':'):
-                        return True
-            return False
-        except IOError as e:
-            raise IOError(f"Error reading the file {self._filename}: {e}")
-        
-    def load_passwords(self, userpin):
-        """Loads the stored passwords from the file."""
-        self._ensure_file_exists(userpin)
-        passwords = {}
-        try:
-            with open(self._filename, 'r') as file:
-                for line in file:
-                    site, username, password = line.strip().split(':')
-                    passwords[username] = password
-        except IOError as e:
-            raise IOError(f"Error reading the file {self._filename}: {e}")
+            passwords = keyring.get_password(APP_NAME, username)
+            return passwords is not None
+        except keyring.errors.KeyringError as e:
+            raise IOError(f"Keyring error while checking username: {e}")
 
-        return passwords
-    
-    def get_passwords(self, userpin):
-        """Returns the stored passwords from the file."""
-        return self.load_passwords(userpin)
-
-    def store_password(self, site, username, password):
-        """Stores the password securely in the file."""
+    def load_passwords(self, username):
+        """Loads the stored passwords for a user from the keyring."""
         try:
-            self._ensure_file_exists()
+            encrypted_data = keyring.get_password(APP_NAME, username)
+            if not encrypted_data:
+                return {}
+            passwords = self._decrypt(bytes.fromhex(encrypted_data))
+            return eval(passwords)  # Convert string representation back to a dictionary
+        except keyring.errors.KeyringError as e:
+            raise IOError(f"Keyring error while loading passwords: {e}")
+
+    def get_passwords(self, username):
+        """Returns the stored passwords for the given username."""
+        return self.load_passwords(username)
+
+    def store_password(self, username, site, password):
+        """Stores the password securely in the keyring."""
+        try:
             validity = PasswordValidator.validate(password)
             if not validity:
-                ValueError("Password is too weak.")
-            encrypted_password = self._encrypt(password)
-            with portalocker.Lock(self._filename, 'a') as file:
-                file.write(f"{site}:{username}:{encrypted_password}\n")
-        except IOError as e:
-            raise IOError(f"Error writing to the file {self._filename}: {e}")
+                raise ValueError("Password is too weak.")
+
+            # Load existing passwords or initialize an empty dictionary
+            passwords = self.load_passwords(username)
+
+            # Add the new password
+            passwords[site] = password
+
+            # Encrypt and save the updated passwords
+            encrypted_passwords = self._encrypt(str(passwords)).hex()
+            keyring.set_password(APP_NAME, username, encrypted_passwords)
+        except keyring.errors.KeyringError as e:
+            raise IOError(f"Keyring error while storing password: {e}")
         except ValueError as e:
             raise ValueError(f"Error storing the password: {e}")
 
+    def delete_password(self, username, site):
+        """Deletes the password associated with the given site for a user."""
+        try:
+            passwords = self.load_passwords(username)
+            if site in passwords:
+                del passwords[site]
 
+                # Encrypt and save the updated passwords
+                encrypted_passwords = self._encrypt(str(passwords)).hex()
+                keyring.set_password(APP_NAME, username, encrypted_passwords)
+            else:
+                raise ValueError(f"No password found for site: {site}")
+        except keyring.errors.KeyringError as e:
+            raise IOError(f"Keyring error while deleting password: {e}")
 
-    def delete_password(self, site, username):
-        """Deletes the password associated with the given username."""
-        self._ensure_file_exists()
-        temp_filename = self._filename + '.tmp'
-        with portalocker.Lock(self._filename, 'r') as file, open(temp_filename, 'w') as temp_file:
-            for line in file:
-                if not line.startswith(username + ':'):
-                    temp_file.write(line)
-        os.replace(temp_filename, self._filename)
+    def add_password(self, username, site, password):
+        """Adds a new password to the keyring."""
+        try:
+            passwords = self.load_passwords(username)
+            if site in passwords:
+                raise ValueError("Site already exists. Use a different site name or update the existing password.")
 
-    def add_password(self, site, username, password):
-        """Adds a new password to the list."""
-        if not self._username_exists(username):
-            self.store_password(site, username, password)
-        else:
-            raise ValueError("Username already exists.")
-
+            self.store_password(username, site, password)
+        except Exception as e:
+            raise e

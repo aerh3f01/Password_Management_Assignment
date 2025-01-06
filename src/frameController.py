@@ -10,6 +10,8 @@ class PassManApp(tk.Tk):
         self.title_font = ("Helvetica", 18)
         self.title("PassMan")
 
+        self.shared_data={}
+
         container = ttk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
         container.grid_rowconfigure(0, weight=1)

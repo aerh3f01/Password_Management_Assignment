@@ -38,6 +38,13 @@ class PasswordsPage(tk.Frame):
         self.password_list.heading("Password", text="Password", anchor=tk.W)
         self.password_list.pack()
 
+        self.userpin = self.controller.shared_data.get("userpin")
+
+        if not self.userpin:
+            messagebox.showerror("Error", "Userpin is not available. Please log in first.")
+            controller.show_frame("LoginPage")
+            return
+
         self.update_password_list()
 
         add_button = ttk.Button(self, text="Add Password", command=self.add_password)
@@ -49,14 +56,18 @@ class PasswordsPage(tk.Frame):
         back_button = ttk.Button(self, text="Back", command=lambda: controller.show_frame("StartPage"))
         back_button.pack()
 
-        self.userpin = self.login_manager.get_userpin()
-
     def update_password_list(self):
         """
         Updates the password list with the current passwords
         """
-        for password in self.password_manager.get_passwords(userpin=0000):
-            self.password_list.insert("", "end", text="", values=(password["website"], password["username"], password["password"]))
+        self.password_list.delete(*self.password_list.get_children())  # Clear existing entries
+
+        try:
+            passwords = self.password_manager.get_passwords(self.userpin)
+            for site, credentials in passwords.items():
+                self.password_list.insert("", "end", text="", values=(site, credentials["username"], credentials["password"]))
+        except Exception as e:
+            messagebox.showerror("Error", f"Unable to load passwords: {e}")
 
     def add_password(self):
         """
@@ -65,8 +76,16 @@ class PasswordsPage(tk.Frame):
         website = simpledialog.askstring("Website", "Enter the website")
         username = simpledialog.askstring("Username", "Enter the username")
         password = simpledialog.askstring("Password", "Enter the password")
-        self.password_manager.add_password(website, username, password)
-        self.update_password_list()
+
+        if not all([website, username, password]):
+            messagebox.showerror("Error", "All fields are required.")
+            return
+
+        try:
+            self.password_manager.add_password(self.userpin, website, username, password)
+            self.update_password_list()
+        except Exception as e:
+            messagebox.showerror("Error", f"Unable to add password: {e}")
 
     def delete_password(self):
         """
@@ -75,15 +94,12 @@ class PasswordsPage(tk.Frame):
         selected = self.password_list.selection()
         if selected:
             item = self.password_list.item(selected)
-            website = item["values"][0] # Website is the first value
+            website = item["values"][0]  # Website is the first value
             username = item["values"][1]
             try:
-                self.password_manager.delete_password(website, username)
+                self.password_manager.delete_password(self.userpin, website)
                 self.password_list.delete(selected)
             except Exception as e:
-                self.controller.handle_error(e)
+                messagebox.showerror("Error", f"Unable to delete password: {e}")
         else:
-            tk.messagebox.showinfo("Error", "Please select a password to delete")
-
-
-
+            messagebox.showinfo("Error", "Please select a password to delete.")
